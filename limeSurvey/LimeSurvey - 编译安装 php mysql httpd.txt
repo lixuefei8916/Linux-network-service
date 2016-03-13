@@ -1,0 +1,231 @@
+一、 Installation[官网 https://manual.limesurvey.org/LimeSurvey_Manual]
+
+	1. 准备工作
+	Minimum 200 MB disk space
+	MySQL 4.1.0 or later OR    Microsoft SQL Server 2005 or later OR  Postgres 8.1 or later
+	PHP 5.3.3 or later with the following modules/libraries enabled:
+
+	2. Create a database user
+	MySQL: SELECT, CREATE, INSERT, UPDATE, DELETE, ALTER, DROP, INDEX
+
+	3. Connect to the administration script for the first time
+	User: admin
+	Password: password
+
+二、主备工作
+	1.卸载系统自带的httpd 和 php
+		yum erase httpd php mysql
+
+	2.添加163镜像 yum [官网：http://mirrors.163.com/.help/centos.html]
+		备份： mv /etc/yum.repos.d/CentOS-Base.repo CentOS-Base.repo_bak
+		下载： wget http://mirrors.163.com/.help/CentOS5-Base-163.repo
+		mv CentOS5-Base-163.repo CentOS-Base.repo
+		yum clean all
+		yum makecache
+
+三、apache
+	1.[官网]http://www.apache.org/ - Download - 镜像站点 - httpd/ - ttpd-2.2.31.tar.gz  
+
+	2. 安装
+		tar xvzf httpd-2.2.31.tar.gz
+		./configure --prefix=/usr/local/apache2
+		make
+		make install
+
+	3. 运行、停止
+		/usr/local/apache2/bin/apachectl start &
+		netstat -lnt  检查是否有80端口 or 访问 192.168.16.138
+
+		/usr/local/apache2/bin/apachectl stop
+
+	4. Apache服务器开机自动启动
+ 		echo "/usr/local/apache243/bin/apachectl start" >> /etc/rc.d/rc.local
+
+四、php
+	1.[官网] http://www.php.net/ - Downloas - php-5.6.18.tar.gz - 选择镜像
+
+	2. 安装 [ 参考：http://php.net/manual/en/install.unix.apache2.php ]
+		tar xvzf php.......tar.gz
+		./configure --prefix=/usr/local/php --with-apxs2=/usr/local/apache2/bin/apxs
+		make
+		make install
+
+		============================================================================
+		安装时的进程
+
+		root      3420  0.0  0.1  62616   504 ?        Ss   17:21   0:00 /usr/sbin/sshd
+		root      3770  0.0  0.2  90116   716 ?        Ss   17:23   0:00  \_ sshd: root@pts/0 
+		root      3772  0.0  0.2  66216   592 pts/0    Ss+  17:23   0:00  |   \_ -bash
+		root      3800  0.3  0.2  91388   704 ?        Ss   17:23   0:09  \_ sshd: root@pts/1,pts/2
+		root      3803  0.0  0.2  66220   656 pts/1    Ss+  17:24   0:00  |   \_ -bash
+		root      4336  0.0  0.2  66216   616 pts/2    Ss   17:38   0:00  |   \_ -bash
+		root     25767  0.0  0.2  59848   564 pts/2    S    17:48   0:00  |       \_ make
+		root      7920  0.0  0.2  65044   524 pts/2    S    17:53   0:00  |       |   \_ /bin/sh /usr/local/src/php-5.6.18/
+		root      8014  0.0  0.1  59116   416 pts/2    S    17:53   0:00  |       |       \_ cc -I/usr/local/src/php-5.6.18
+		root      8015  1.6 18.2 598208 46108 pts/2    D    17:53   0:19  |       |           \_ /usr/libexec/gcc/x86_64-re
+		root     25768  0.0  0.2  59848   564 pts/2    S+   17:48   0:00  |       \_ make install
+		root      4515  0.0  0.2  65044   524 pts/2    S+   17:51   0:00  |           \_ /bin/sh /usr/local/src/php-5.6.18/
+		root      4610  0.0  0.1  59116   416 pts/2    S+   17:51   0:00  |               \_ cc -I/usr/local/src/php-5.6.18
+		root      4611  1.7 59.9 601348 151384 pts/2   D+   17:51   0:22  |                   \_ /usr/libexec/gcc/x86_64-re
+
+		============================================================================
+
+	3. 【不用】配置
+		cp /usr/local/src/php-5.6.18/php.ini-development /usr/local/php/etc/php.ini 
+		但php.ini不好用，<?php; phpinfo;?>中有一个参数（Loaded Configuration File ）的值是none，自己理解的意思就是没有加载php.
+
+		解决：（指定apache加载php配置文件），添加之后就可以了。
+		vi /usr/local/apache2/conf/httpd.conf 
+			PHPIniDir "/usr/local/php/etc/php.ini"  [最后一行添加]
+
+
+	4. 修改 httpd.conf 支持php
+		cat /usr/local/apache2/conf/httpd.conf | grep -v '^#'
+		vi /usr/local/apache2/conf/httpd.conf
+			<IfModule dir_module> 
+　　		DirectoryIndex index.html index.php 
+			</IfModule> 
+
+			AddType application/x-httpd-php .php
+
+	5. 测试
+		/usr/local/apache2/bin/apachectl start &
+		vi /usr/local/apache2/htdocs/test.php
+			<?php
+			phpinfo();
+			?>
+		访问 192.168.16.138/test.php
+
+	6. 相关文件目录
+		通过访问 192.168.16.138/test.php 得知一下目录
+		include_path  = "/usr/local/php/lib"
+		extension_dir = "/usr/local/php/lib/php/extensions/no-debug-non-zts-20131226"
+
+
+
+四、mysql  [官网] 暂未找到
+	1. 安装
+		groupadd mysql
+		useradd -g mysql mysql
+
+		./configure --prefix=/usr/local/mysql --enable-thread-safe-client --with-extra-charsets=all 
+		make
+		make install
+
+		创建配置文件
+		cp support-files/my-medium.cnf /etc/my.cnf
+
+		创建MySQL授权表。
+		cd /usr/local/mysql
+		bin/mysql_install_db --user=mysql  //创建授权表  (需要重启服务器)
+
+		chown -R root .(注意有点)
+		chown -R mysql var  
+		chgrp -R mysql .(注意有点)
+
+
+	2. 启动
+		usr/local/mysql/bin/mysqld_safe --user=mysql &
+		bin/mysql -u root -h localhost -p
+
+		停止
+		bin/mysqladmin -u root -p shutdown
+
+		查看版本
+		bin/mysqladmin  version
+		bin/mysqladmin variables //查看所有mysql参数
+
+
+	3. 进入mysql
+		bin/mysql -u root
+
+	4. 创建数据库
+		create database LimeSurvey;
+
+	4. 添加mysql账户 limesurvey
+	    insert into mysql.user(host,user,password)values('%','limesurvey',password("123456")); 
+	    flush privileges;
+	    
+	    修复 limesurvey账户无法本地登录问题
+	    mysql> use mysql
+	    mysql> update user set host='localhost' where user='limesurvey' and host='%';
+	    mysql> flush privileges;
+
+	5. 设置权限
+	    grant SELECT,CREATE,INSERT,UPDATE,DELETE,ALTER,DROP,INDEX on LimeSurvey.* to limesurvey@'%';
+	    flush privileges;
+
+
+五、Limesurvey  [数据库：LimeSurvey   用户名：limesurvey  123456]
+	下载：https://www.limesurvey.org/downloads/category/25-latest-stable-release
+	文档：https://manual.limesurvey.org/Installation
+
+	1. 安装
+		tar xvzf limesurvey.tar.gz
+		cp -r limesurvey /usr/local/apache2/htdocs/   【解压后，就是 html文件】
+			查看 limesurvey的整个大小
+			du -sh limesurvey/
+			209M    limesurvey/
+
+		cd /usr/local/apache2/htdocs/
+		chown -R apache.apache limesurvey/
+
+		chmod -R 755 limesurvey/ 
+		chmod -R 777 tmp/				[报错后，网页提示的，tmp/需要766权限]
+		chmod -R 777 upload/
+		chmod -R 777 application/config/
+
+	2. 访问
+		192.168.16.138/limesurvey
+		若报错，是目录权限问题
+
+		【此时发现，少了 PHP PDO 驱动库 和 PHP mbstring 库】 --> 六、安装缺少的插件
+
+	3. 根据 web里的安装引导 配置
+		1. 语言： 中文
+		2. 名词： 接受
+		3. 安装前检查： 
+
+
+六、安装缺少的插件
+
+	1. /usr/local/php/bin/phpize 建立php扩展
+	   如果报错：【 Cannot find config.m4.】
+	   参照 
+
+	2. 安装pdo_mysql
+		cd /usr/local/src/php-5.6.17/ext/pdo_mysql 
+
+		/usr/local/php/bin/phpize		[ 执行 phpize命令；该命令在 php 安装目录]
+		执行完 phpize 命令后，在 pdo_mysql 目录[解压目录]中就会出现 configure
+
+		./configure --with-php-config=/usr/local/php/bin/php-config --with-pdo-mysql=/usr/local/mysql/  
+		make && make install
+
+		完成后出现
+		Installing shared extensions:     /usr/local/php/lib/php/extensions/no-debug-zts-20100525/
+
+		vi /usr/local/php/etc/php.ini   
+		在; Windows Extensions 的最下面加入
+		extension=/usr/local/php/lib/php/extensions/no-debug-non-zts-20131226/pdo_mysql.so
+
+	3. PHP-mbstring 库 [php安装后默认不自带的]
+		cd /usr/local/src/php-5.6.17/ext/mbstring
+
+		/usr/local/php/bin/phpize		[ 执行 phpize命令；该命令在 php 安装目录]
+		执行完 phpize 命令后，在 pdo_mysql 目录[解压目录]中就会出现 configure
+
+		./configure --with-php-config=/usr/local/php/bin/php-config --with-pdo-mysql=/usr/local/mysql/  
+		make && make install
+
+		完成后出现
+		Installing shared extensions:     /usr/local/php/lib/php/extensions/no-debug-zts-20100525/
+
+		vi /usr/local/php/etc/php.ini   
+		在; Windows Extensions 的最下面加入
+		extension=/usr/local/php/lib/php/extensions/no-debug-non-zts-20131226/mbstring.so
+
+	【此时 所需插件全部完成，可以访问 http://192.168.16.138/limesurvey/ 继续安装】
+
+
+

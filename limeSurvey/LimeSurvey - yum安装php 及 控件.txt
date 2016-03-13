@@ -1,0 +1,187 @@
+一、 Installation[官网 https://manual.limesurvey.org/LimeSurvey_Manual]
+
+	1. 准备工作
+	Minimum 200 MB disk space
+	MySQL 4.1.0 or later OR    Microsoft SQL Server 2005 or later OR  Postgres 8.1 or later
+	PHP 5.3.3 or later with the following modules/libraries enabled:
+
+	2. Create a database user
+	MySQL: SELECT, CREATE, INSERT, UPDATE, DELETE, ALTER, DROP, INDEX
+
+	3. Connect to the administration script for the first time
+	User: admin
+	Password: password
+
+二、主备工作
+	1.卸载系统自带的httpd 和 php
+		yum erase httpd php mysql
+		yum remove php php-pdo php-mysql php-mbstring php-gd php-ldap php-imap
+
+	2.添加163镜像 yum [官网：http://mirrors.163.com/.help/centos.html]
+		备份： mv /etc/yum.repos.d/CentOS-Base.repo CentOS-Base.repo_bak
+		下载： wget http://mirrors.163.com/.help/CentOS5-Base-163.repo
+		mv CentOS5-Base-163.repo CentOS-Base.repo
+		yum clean all
+		yum makecache
+
+三、 yum 安装 httpd mysql mysql-server
+	1. 安装 
+		yum -y install httpd mysql mysql-server
+	2. 查找 目录
+		rpm -ql httpd
+
+四、 yum 安装 php
+	1. 添加 php5.5 yum源文 （否则装的是低版本）
+		rpm -Uvh http://mirror.webtatic.com/yum/el5/latest.rpm   [如果报错，是因为版本不对， el5用于CentOS5]
+
+	2. yum安装
+		yum install php55w.x86_64 php55w-cli.x86_64 php55w-common.x86_64 php55w-gd.x86_64 php55w-ldap.x86_64 php55w-mbstring.x86_64 php55w-mcrypt.x86_64 php55w-mysql.x86_64 php55w-pdo.x86_64
+
+
+三、apache
+	1.[官网]http://www.apache.org/ - Download - 镜像站点 - httpd/ - ttpd-2.2.31.tar.gz  
+
+	2. 查找相关文件
+		rpm -ql httpd
+
+		whereis httpd  				[ http的主目录  /usr/sbin/httpd  /etc/httpd]
+		find / -name httpd.conf 	[ /etc/httpd/conf = 系统配置文件目录 ]
+
+		从配置文件中得知：			ServerRoot "/etc/httpd"   		[apache 主目录]
+									DocumentRoot "/var/www/html"	[ web文件目录 ]
+									User apache
+									Group apache
+
+	3. /etc/httpd/conf/httpd.conf
+		DirectoryIndex index.html index.php
+		AddType application/x-httpd-php .php
+
+	4. 测试
+		vi /var/www/html/test.php
+			<?php
+			phpinfo();
+			?>
+		访问 192.168.16.138/test.php
+
+
+四、php
+	1.[官网] http://www.php.net/ - Downloas - php-5.6.18.tar.gz - 选择镜像
+
+	2. 测试
+		vi /var/www/test.php
+			<?php
+			phpinfo();
+			?>
+		访问 192.168.16.138/test.php
+
+	3. 相关目录(访问 192.168.16.138/test.php 后得知)
+		rpm -ql php
+		Configuration File (php.ini) Path  ：	/etc/php.ini
+		/etc/php.d/xx （dbase.ini, gd.ini, imap.ini,ldap.ini, mbstring.ini, mysql.ini, pdo.ini, pdo_mysql.ini）
+
+
+
+四、mysql  [官网] 暂未找到
+	[库名：LimeSurvey | limesurvey 123456 只能访问LimeSurvey库 ]
+
+	1. 查找相关目录
+		rpm -ql mysql-server
+
+		whereis mysql
+			/usr/bin/mysql /usr/lib/mysql /usr/share/mysql
+
+		查找mysql配置文件  find / -name my.cnf
+			/etc/my.cnf
+
+		通过配置文件得知：
+			datadir=/var/lib/mysql
+			socket=/var/lib/mysql/mysql.sock
+			log-error=/var/log/mysqld.log
+
+
+	3. 进入mysql
+		/usr/bin/mysql -u root
+
+	4. 创建数据库
+		create database LimeSurvey;
+
+	4. 添加mysql账户 limesurvey
+	    insert into mysql.user(host,user,password)values('%','limesurvey',password("123456")); 
+	    flush privileges;
+	    
+	    修复 limesurvey账户无法本地登录问题
+	    mysql> use mysql
+	    mysql> update user set host='localhost' where user='limesurvey' and host='%';
+	    mysql> flush privileges;
+
+	5. 设置权限
+	    grant SELECT,CREATE,INSERT,UPDATE,DELETE,ALTER,DROP,INDEX on LimeSurvey.* to limesurvey@'%';
+	    flush privileges;
+
+五、Limesurvey 
+	下载：https://www.limesurvey.org/downloads/category/25-latest-stable-release
+	文档：https://manual.limesurvey.org/Installation
+
+	1. 安装
+		cd /var/www/html
+		tar xvzf limesurvey.tar.gz
+
+		chown -R apache.apache limesurvey/
+		chmod -R 755 limesurvey/ 
+		chmod -R 777 tmp/				[报错后，网页提示的，tmp/需要766权限]
+		chmod -R 777 upload/
+		chmod -R 777 application/config/
+
+	2. 访问
+		192.168.16.138/limesurvey
+		若报错，是目录权限问题
+
+	3. 根据 web里的安装引导 配置
+		1. 语言： 中文
+		2. 名词： 接受
+		3. 安装前检查： 
+		4. 数据库设置：  [库名：LimeSurvey | limesurvey 123456 只能访问LimeSurvey库 ]
+		5. 填充数据库
+
+		6. LimeSurvey 选项设置
+			管理员用户名： admin  123456
+
+
+六、web访问统计
+	 1、查看apache当前并发访问数： 
+　		netstat -an | grep ESTABLISHED | wc -l 
+		对比httpd.conf中MaxClients的数字差距多少。
+
+	2、查看有多少个进程数： 
+		ps aux|grep httpd|wc -l 
+
+	3、查看Apache的并发请求数及其TCP连接状态： 
+		netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}' 
+　　 		LAST_ACK 5 
+　　 		SYN_RECV 30 
+　　 		ESTABLISHED 1597 
+　　 		FIN_WAIT1 51 
+　　 		FIN_WAIT2 504 
+　　		TIME_WAIT 1057 
+
+	4. 用cat 统计apache 日志ip 【/var/log/httpd/access_log  error_log】
+		cat /var/log/httpd/access_log |awk -F " " '{print $1}' 
+			127.0.0.1 
+			192.168.1.100 
+
+		对IP进行统计，看各IP出现过多少次 
+		cat /var/log/httpd/access_log |awk -F " " '{print $1}' |uniq -c 
+      		1 127.0.0.1 
+      		3 192.168.1.100 
+
+		按IP出现次数从大到小排列 
+		cat /var/log/httpd/access_log |awk -F " " '{print $1}' |uniq -c |sort -r 
+		      3 192.168.1.100 
+		      1 127.0.0.1 
+
+		再次提取出IP段 
+			cat aa.txt |awk -F " " '{print $1}' |uniq -c |sort -r |awk '{print $2}' 
+			192.168.1.100 
+			127.0.0.1 
+
+
