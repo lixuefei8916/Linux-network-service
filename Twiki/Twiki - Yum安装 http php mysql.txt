@@ -1,0 +1,141 @@
+安装 Twiki
+
+-------------------------------
+本文档 参照 http://www.cnblogs.com/coderzh/archive/2010/12/26/twiki.html
+-------------------------------
+
+
+
+一、 准备工作
+	1. 卸载系统自带 httpd mysql php
+		yum erase httpd mysql php
+
+	2. 163 yum 源  [官网 http://mirrors.163.com/.help/centos.html]
+		mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo_bak
+		wget http://mirrors.163.com/.help/CentOS5-Base-163.repo 【注：CentOS 5】
+		mv CentOS5-Base-163.repo CentOS-Base.repo
+		yum clean all
+		yum makecache
+
+二、安装必要程序
+	$ sudo apt-get install apache2 perl cron grep rcs patch php5
+	$ sudo apt-get install libapache2-mod-php5 libcgi-session-perl libdigest-sha1-perl libhtml-parser-perl
+
+	-----------------------------------------------------
+	| 没用此方法
+	| --------------------------------------------------
+	| 1. 安装 apache(httpd)
+	| 	yum install httpd 
+	| 
+	| 2. Perl5.8及所需模块
+	| 	perl -MCPAN -e 'install CGI::Session' 
+	| 	[需要很长很长时间，预计4个小时]
+	| 
+	| 	【这个命令会自动安装CGI会话,不过需要CentOS联网>
+	| 	该命令自动完成Unicode-String-2.09.tar 。Unicode-String解压，然后进入解压后的目录perl Makefile.pl，make test,make install即可。】
+	-----------------------------------------------------
+
+三、安装Twiki
+	[官网-教程]http://twiki.org/cgi-bin/view/TWiki/TWikiInstallationGuide#Basic_Installation
+	[官网-apache twiki.conf]http://twiki.org/cgi-bin/view/TWiki/ApacheConfigGenerator
+	[下载 wget http://downloads.sourceforge.net/project/twiki/TWiki%20for%20all%20Platforms/TWiki-5.0.1/TWiki-5.0.1.tgz?r=&ts=1293085896&use_mirror=nchc]
+
+	1. 文件夹与文件
+		cd /var/www/html
+		tar xvzf TWiki-5.0.1.tgz
+		chown -R apache.apache twiki/
+
+	2. LocalLib.cfg
+		cp /var/www/html/twiki/bin/LocalLib.cfg.txt /var/www/html/twiki/bin/LocalLib.cfg
+		vi LocalLib.cfg
+			$twikiLibPath = "/var/www/html/twiki/lib";
+
+
+	3. twiki.conf 和 httpd.conf 文件
+		0) 生成twiki.conf配置文件内容 
+	   		访问http://twiki.org/cgi-bin/view/TWiki/ApacheConfigGenerator
+	   		改 /var/www/html/twiki
+	   		最后生成配置文件内容： 点击Update config file
+
+	   		(或者复制一份/var/www/twiki/twiki_httpd_conf.txt为twiki.conf，然后修改里面的路径相关的设置)
+	   		
+	   	1) vi tiwiki.conf（/var/www/html/twiki）
+	   		把生成的内容粘贴进来
+
+	   	2) vim httpd.conf 关联 tiwiki.conf
+	   		Include conf.d/*.conf
+	   		Include "/var/www/html/twiki/twiki.conf"
+
+
+		2) ScriptAlias /twiki/bin "/var/www/html/twiki/bin"
+		3) Alias /twiki/pub "/var/www/html/twiki/pub"
+
+		[最后也没用 httpd.conf里的php]
+
+
+
+
+四、web中配置 http://192.168.16.138/twiki/bin/configure
+	1. 中文支持
+		$ sudo locale-gen zh_CN
+		$ sudo locale-gen zh_CN.UTF-8
+		$ sudo dpkg-reconfigure locales
+
+		页面中点击 Open all options 然后尾页会延长很多，建议搜索关键字
+		{UserInterfaceInternationalisation} √
+		{Languages}{'zh-cn'}{Enabled} √
+		{DisplayTimeValues} servertime
+		{UseLocale} √
+		{Site}{Locale} zh_CN.UTF-8
+		{Site}{LocaleRegexes} √
+		{Site}{CharSet} UTF-8
+		{Site}{Lang} zh
+		{Site}{FullLang} zh-cn
+		{PluralToSingular} √
+
+
+
+=========================================================
+Twiki 使用
+	参考：http://wenku.baidu.com/link?url=K8bs66blEU0F_Pxf1R6rYQv5Qm7_ROiozWXg00GeytNwhxOtfLX_NMaCPtsuoD4P0-ZG0XU93bcoZiNBZMcDPdmpLz4SgOSBUPqW2l2nJie
+
+	0. 沙盒测试 【如果不懂，请再次测试后再实际编写】
+		http://192.168.16.138/twiki/bin/view/Sandbox/
+
+	1. Twiki里新建页面
+		主页HomePage - Twiki web - 管理员维护 - Managing Webs
+		[Adding a New Web]
+			based on web: default 与 Twiki web平级
+			Web color	：#CC0099
+
+
+
+
+
+
+=========================================================
+维护技巧
+
+
+3. 批量添加用户
+	进入页面：http://192.168.16.138/twiki/bin/view/TWiki/BulkRegistration ，里面有详细说明。
+
+ 
+
+4. 页面设置
+	WebPreferences和TopicPreferences页面，可对Web或Topic进行设置，比如权限等等。详细的有哪些设置项，可参考：
+	http://<ipaddress>/twiki/bin/view/TWiki/TWikiPreferences
+	比如，要设置管理员才能修改的权限，之需要在Wiki内容或者当前Topic的设置页面，添加如下语句： 
+
+   	Set ALLOWTOPICCHANGE = TWikiAdminGroup
+	注意格式为：[3个空格]Set[空格]xxx[空格]=[空格]xxx
+
+-------------------------------
+参考教程
+
+1、中文教程：http://www.pgsqldb.org/twiki/bin/view/TWiki/TWiki安装教程#7_TWiki
+2、TWiki的FireFox的插件。http://twiki.org/cgi-bin/view/Plugins/FirefoxExtensionAddOn 。有了这个插件，编辑Wiki真是简单很多。：）
+3、TWiki的英文语法说明：http://wiki.java.net/bin/view/TWiki/TextFormattingRules
+4. http://www.chedong.com/blog/archives/000804.html  TWiki的安装,配置和用户管理
+-------------------------------
+ 
